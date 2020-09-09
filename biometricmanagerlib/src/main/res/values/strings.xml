@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Fingerprint Compat</string>
+    <string name="fingerprint_authenticate">Verification</string>
+    <string name="press_fingerprint">Verify fingerprint to continue</string>
+    <string name="cancel">Cancel</string>
+    <string name="retry">Failed to identify, please try again</string>
+    <string name="change_finger">Try another finger</string>
+</resources>

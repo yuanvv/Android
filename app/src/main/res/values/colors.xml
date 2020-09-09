@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#075a93</color>
+    <color name="colorPrimaryDark">#004778</color>
+    <color name="colorAccent">#0ab506</color>
+
+    <color name="red">#e60c20</color>
+    <color name="green">#82C785</color>
+    <color name="black">#333</color>
+    <color name="white">#fff</color>
+    <color name="purple">#9c17df</color>
+
+    <color name="listLine">#e6e6e6</color>
+    <color name="mainBlue">#0390fc</color>
+    <color name="gray9">#999</color>
+    <color name="gray8">#888</color>
+    <color name="secondaryGray">#7f7f7f</color>
+    <color name="threeGray">#8d8d8d</color>
+    <color name="lightGray">#F0F0F0</color>
+    <color name="quaternary">#CDCED0</color>
+    <color name="background">#f6f6f6</color>
+
+    <color name="bg_biometric_prompt_dialog">#99000000</color>
+</resources>
