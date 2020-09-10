@@ -74,38 +74,79 @@ public class Secp256k1Util {
         Map<String, Object> ecKey = new HashMap<>();
         SDCardUtils sdCardUtils = new SDCardUtils(context);
         RSAUtils rsaUtils = new RSAUtils(context);
+        Map<String, Object> rsaKeyPair = new HashMap<>();
         String sdKeyPath = "KeyStore/";
         String sdPublicPEMName = "publickey.pem";
         String sdPrivatePEMName = "privatekey.pem";
         try {
-            if (!rsaUtils.containsAlias()) {
-                rsaUtils.generateRSAKeyPair();
-            }
-            if (sdCardUtils.isFileExist(sdKeyPath + sdPrivatePEMName)) {
-                String privateStr = sdCardUtils.readPEMFileFromSD(sdKeyPath, sdPrivatePEMName);
-                String publicStr = sdCardUtils.readPEMFileFromSD(sdKeyPath, sdPublicPEMName);
-                ecKey.put("publicKey", getPublicKeyFromString(publicStr));
-                ecKey.put("privateKey", getPrivateKeyFromString(rsaUtils.decryptByPrivateKey(privateStr)));
-            } else if (SPUtils.contains(context, "privateKey")) {
-                ecKey.put("publicKey", getPublicKeyFromString(SPUtils.getString(context, "publicKey", "")));
-                ecKey.put("privateKey", getPrivateKeyFromString(rsaUtils.decryptByPrivateKey(SPUtils.getString(context, "privateKey", ""))));
-
-                if (sdCardUtils.isSDCardEnableByEnvironment()) {
-                    sdCardUtils.saveKeyAsPEM(Base64.encodeToString(((PublicKey) ecKey.get("publicKey")).getEncoded(), Base64.NO_WRAP), sdKeyPath, sdPublicPEMName);
-                    sdCardUtils.saveKeyAsPEM(rsaUtils.encryptByPublicKey(Base64.encodeToString(((PrivateKey) ecKey.get("privateKey")).getEncoded(), Base64.NO_WRAP)), sdKeyPath, sdPrivatePEMName);
-
-                    SPUtils.remove(context, "publicKey");
-                    SPUtils.remove(context, "privateKey");
+            if (!sdCardUtils.isFileExist(sdKeyPath + sdPrivatePEMName) && !SPUtils.contains(context, "privateKey")) {
+                if (!rsaUtils.containsAlias()) {
+                    rsaKeyPair = rsaUtils.generateRSAKeyPair();
                 }
             } else {
-                ecKey = generateSECP256K1Keypair();
+                if (rsaUtils.containsAlias()) {
+                    rsaKeyPair.put("publicKey", rsaUtils.getPublicKey());
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        try {
+            if (rsaKeyPair != null && rsaKeyPair.size() > 0) {
+                if (sdCardUtils.isFileExist(sdKeyPath + sdPrivatePEMName)) {
+                    String privateStr = sdCardUtils.readPEMFileFromSD(sdKeyPath, sdPrivatePEMName);
+                    String publicStr = sdCardUtils.readPEMFileFromSD(sdKeyPath, sdPublicPEMName);
+                    ecKey.put("publicKey", getPublicKeyFromString(publicStr));
+                    ecKey.put("privateKey", getPrivateKeyFromString(rsaUtils.decryptByPrivateKey(privateStr)));
+                } else if (SPUtils.contains(context, "privateKey")) {
+                    ecKey.put("publicKey", getPublicKeyFromString(SPUtils.getString(context, "publicKey", "")));
+                    ecKey.put("privateKey", getPrivateKeyFromString(rsaUtils.decryptByPrivateKey(SPUtils.getString(context, "privateKey", ""))));
 
-                if (sdCardUtils.isSDCardEnableByEnvironment()) {
-                    sdCardUtils.saveKeyAsPEM(Base64.encodeToString(((PublicKey) ecKey.get("publicKey")).getEncoded(), Base64.NO_WRAP), sdKeyPath, sdPublicPEMName);
-                    sdCardUtils.saveKeyAsPEM(rsaUtils.encryptByPublicKey(Base64.encodeToString(((PrivateKey) ecKey.get("privateKey")).getEncoded(), Base64.NO_WRAP)), sdKeyPath, sdPrivatePEMName);
+                    if (sdCardUtils.isSDCardEnableByEnvironment()) {
+                        sdCardUtils.saveKeyAsPEM(Base64.encodeToString(((PublicKey) ecKey.get("publicKey")).getEncoded(), Base64.NO_WRAP), sdKeyPath, sdPublicPEMName);
+                        sdCardUtils.saveKeyAsPEM(rsaUtils.encryptByPublicKey(Base64.encodeToString(((PrivateKey) ecKey.get("privateKey")).getEncoded(), Base64.NO_WRAP)), sdKeyPath, sdPrivatePEMName);
+
+                        SPUtils.remove(context, "publicKey");
+                        SPUtils.remove(context, "privateKey");
+                    }
                 } else {
-                    SPUtils.put(context, "publicKey", Base64.encodeToString(((PublicKey) ecKey.get("publicKey")).getEncoded(), Base64.NO_WRAP));
-                    SPUtils.put(context, "privateKey", rsaUtils.encryptByPublicKey(Base64.encodeToString(((PrivateKey) ecKey.get("privateKey")).getEncoded(), Base64.NO_WRAP)));
+                    ecKey = generateSECP256K1Keypair();
+
+                    if (sdCardUtils.isSDCardEnableByEnvironment()) {
+                        sdCardUtils.saveKeyAsPEM(Base64.encodeToString(((PublicKey) ecKey.get("publicKey")).getEncoded(), Base64.NO_WRAP), sdKeyPath, sdPublicPEMName);
+                        sdCardUtils.saveKeyAsPEM(rsaUtils.encryptByPublicKey(Base64.encodeToString(((PrivateKey) ecKey.get("privateKey")).getEncoded(), Base64.NO_WRAP)), sdKeyPath, sdPrivatePEMName);
+                    } else {
+                        SPUtils.put(context, "publicKey", Base64.encodeToString(((PublicKey) ecKey.get("publicKey")).getEncoded(), Base64.NO_WRAP));
+                        SPUtils.put(context, "privateKey", rsaUtils.encryptByPublicKey(Base64.encodeToString(((PrivateKey) ecKey.get("privateKey")).getEncoded(), Base64.NO_WRAP)));
+                    }
+                }
+            } else {
+                if (sdCardUtils.isFileExist(sdKeyPath + sdPrivatePEMName)) {
+                    String privateStr = sdCardUtils.readPEMFileFromSD(sdKeyPath, sdPrivatePEMName);
+                    String publicStr = sdCardUtils.readPEMFileFromSD(sdKeyPath, sdPublicPEMName);
+                    ecKey.put("publicKey", getPublicKeyFromString(publicStr));
+                    ecKey.put("privateKey", getPrivateKeyFromString(privateStr));
+                } else if (SPUtils.contains(context, "privateKey")) {
+                    ecKey.put("publicKey", getPublicKeyFromString(SPUtils.getString(context, "publicKey", "")));
+                    ecKey.put("privateKey", getPrivateKeyFromString(SPUtils.getString(context, "privateKey", "")));
+
+                    if (sdCardUtils.isSDCardEnableByEnvironment()) {
+                        sdCardUtils.saveKeyAsPEM(Base64.encodeToString(((PublicKey) ecKey.get("publicKey")).getEncoded(), Base64.NO_WRAP), sdKeyPath, sdPublicPEMName);
+                        sdCardUtils.saveKeyAsPEM(Base64.encodeToString(((PrivateKey) ecKey.get("privateKey")).getEncoded(), Base64.NO_WRAP), sdKeyPath, sdPrivatePEMName);
+
+                        SPUtils.remove(context, "publicKey");
+                        SPUtils.remove(context, "privateKey");
+                    }
+                } else {
+                    ecKey = generateSECP256K1Keypair();
+
+                    if (sdCardUtils.isSDCardEnableByEnvironment()) {
+                        sdCardUtils.saveKeyAsPEM(Base64.encodeToString(((PublicKey) ecKey.get("publicKey")).getEncoded(), Base64.NO_WRAP), sdKeyPath, sdPublicPEMName);
+                        sdCardUtils.saveKeyAsPEM(Base64.encodeToString(((PrivateKey) ecKey.get("privateKey")).getEncoded(), Base64.NO_WRAP), sdKeyPath, sdPrivatePEMName);
+                    } else {
+                        SPUtils.put(context, "publicKey", Base64.encodeToString(((PublicKey) ecKey.get("publicKey")).getEncoded(), Base64.NO_WRAP));
+                        SPUtils.put(context, "privateKey", Base64.encodeToString(((PrivateKey) ecKey.get("privateKey")).getEncoded(), Base64.NO_WRAP));
+                    }
                 }
             }
         } catch (Exception e) {
