@@ -39,7 +39,7 @@ public class RSAUtils {
 
     private void init() {
         try {
-            aliasName = "PAChain-RSA";
+            aliasName = "PAChainRSA";
 
             keyStore = KeyStore.getInstance("AndroidKeyStore");
             keyStore.load(null);

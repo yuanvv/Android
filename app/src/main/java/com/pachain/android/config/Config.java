@@ -3,7 +3,7 @@ package com.pachain.android.config;
 public class Config {
     public final static int DB_VERSION = 1;
 
-    public final static String PROJECT_BASE_URL = "Server api interface";
+    public final static String PROJECT_BASE_URL = "Server api url";
     public final static String CONTROLLER = "api/";
     public final static String UPLOADPHOTO = PROJECT_BASE_URL + CONTROLLER + "voter/updateimage";
     public final static String SENDVERIFICATIONCODE = PROJECT_BASE_URL + CONTROLLER + "voter/sendsmsmessage";

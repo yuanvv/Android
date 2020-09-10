@@ -61,7 +61,7 @@ public class Secp256k1Util {
 
     private void init() {
         try {
-            aliasName = "PAChain-EC";
+            aliasName = "PAChainEC";
 
             keyStore = KeyStore.getInstance("AndroidKeyStore");
             keyStore.load(null);
