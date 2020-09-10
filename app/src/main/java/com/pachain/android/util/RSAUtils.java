@@ -1,7 +1,6 @@
 package com.pachain.android.util;
 
 import android.content.Context;
-import android.os.Build;
 import android.security.KeyPairGeneratorSpec;
 import android.util.Base64;
 import java.math.BigInteger;
@@ -23,7 +22,6 @@ import java.util.HashMap;
 import java.util.Map;
 import javax.crypto.Cipher;
 import javax.security.auth.x500.X500Principal;
-import androidx.annotation.RequiresApi;
 
 public class RSAUtils {
     private Context context;
@@ -54,7 +52,7 @@ public class RSAUtils {
         Map<String, Object> keyPairMap = new HashMap<>();
 
         Calendar endDate = Calendar.getInstance();
-        endDate.add(Calendar.YEAR, 30);
+        endDate.add(Calendar.YEAR, 10);
 
         //Default: 2048
         KeyPairGeneratorSpec spec = new KeyPairGeneratorSpec.Builder(this.context.getApplicationContext())
@@ -83,6 +81,14 @@ public class RSAUtils {
             e.printStackTrace();
         }
         return contains;
+    }
+
+    public PublicKey getPublicKey() throws Exception {
+        if (keyStore.containsAlias(aliasName)) {
+            return keyStore.getCertificate(aliasName).getPublicKey();
+        } else {
+            return null;
+        }
     }
 
     public void deleteKey() {
