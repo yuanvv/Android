@@ -18,7 +18,7 @@ dependencies {
 
 Step 3. Import the library to your project; <br>
 
-Step 4. Modify "Server api url"： <br>
+Step 4. Modify "Server api url": <br>
 In the path: /app/src/main/java/com/pachain/android/config/Config.java <br>
 
 ## How to use the library?
