@@ -1,3 +1,4 @@
+include ':recyclerview'
 include ':biometricmanagerlib'
 rootProject.name='MobileVoting'
 include ':app'

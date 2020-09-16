@@ -50,7 +50,6 @@
                 android:id="@+id/sp_state"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginRight="-10dp"
                 android:layout_gravity="center_vertical"/>
         </LinearLayout>
         <LinearLayout
@@ -67,7 +66,6 @@
                 android:id="@+id/sp_county"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginRight="-10dp"
                 android:layout_gravity="center_vertical"/>
         </LinearLayout>
         <LinearLayout
@@ -83,7 +81,49 @@
                 android:id="@+id/sp_precinct"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginRight="-10dp"
+                android:layout_gravity="center_vertical"/>
+        </LinearLayout>
+    </LinearLayout>
+    <LinearLayout
+        android:id="@+id/ll_officesSeats"
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:visibility="gone">
+        <LinearLayout
+            android:id="@+id/ll_offices"
+            android:layout_width="0dp"
+            android:layout_height="33dp"
+            android:layout_weight="1"
+            android:paddingLeft="1dp"
+            android:paddingRight="1dp"
+            android:paddingTop="1dp"
+            android:paddingBottom="1dp"
+            android:background="@drawable/pachain_shape_spinner_frame">
+            <Spinner
+                android:id="@+id/sp_offices"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"/>
+        </LinearLayout>
+        <LinearLayout
+            android:id="@+id/ll_seats"
+            android:layout_width="0dp"
+            android:layout_height="33dp"
+            android:layout_weight="1"
+            android:layout_marginLeft="10dp"
+            android:paddingLeft="1dp"
+            android:paddingRight="1dp"
+            android:paddingTop="1dp"
+            android:paddingBottom="1dp"
+            android:background="@drawable/pachain_shape_spinner_frame">
+            <Spinner
+                android:id="@+id/sp_seats"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"/>
         </LinearLayout>
     </LinearLayout>
@@ -138,25 +178,6 @@
                 android:src="@drawable/pachain_datepicker"/>
         </LinearLayout>
         <LinearLayout
-            android:id="@+id/ll_seats"
-            android:layout_width="0dp"
-            android:layout_height="33dp"
-            android:layout_weight="1"
-            android:layout_marginLeft="10dp"
-            android:paddingLeft="1dp"
-            android:paddingRight="1dp"
-            android:paddingTop="1dp"
-            android:paddingBottom="1dp"
-            android:background="@drawable/pachain_shape_spinner_frame"
-            android:visibility="gone">
-            <Spinner
-                android:id="@+id/sp_seats"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginRight="-10dp"
-                android:layout_gravity="center_vertical"/>
-        </LinearLayout>
-        <LinearLayout
             android:orientation="vertical"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -181,26 +202,6 @@
         android:layout_marginRight="15dp"
         android:layout_gravity="right"
         android:textColor="@color/black"/>
-    <ListView
-        android:id="@+id/lv_votedVoters"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:divider="@null"
-        android:fastScrollEnabled="false"
-        android:overScrollMode="never"
-        android:scrollbars="none"
-        android:visibility="gone"/>
-    <ListView
-        android:id="@+id/lv_votedResults"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:divider="@null"
-        android:fastScrollEnabled="false"
-        android:overScrollMode="never"
-        android:scrollbars="none"
-        android:visibility="gone"/>
     <TextView
         android:id="@+id/tv_none"
         android:layout_width="match_parent"
@@ -209,5 +210,15 @@
         android:layout_marginBottom="10dp"
         android:text="@string/common_none"
         android:gravity="center_horizontal"
+        android:visibility="gone"/>
+    <com.pachain.xrecyclerview.XRecyclerView
+        android:id="@+id/rv_votedVoters"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"/>
+    <com.pachain.xrecyclerview.XRecyclerView
+        android:id="@+id/rv_votedResults"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:visibility="gone"/>
 </LinearLayout>

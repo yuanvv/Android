@@ -1,18 +1,15 @@
 package com.pachain.android.adapter;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.text.TextUtils;
-import android.util.Base64;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import com.facebook.drawee.view.SimpleDraweeView;
 import com.pachain.android.common.ToolPackage;
 import com.pachain.android.entity.CandidateEntity;
 import java.util.ArrayList;
@@ -99,9 +96,13 @@ public class BallotResultAdapter extends BaseAdapter {
                 holder.tv_party.setVisibility(View.GONE);
             }
             if (!TextUtils.isEmpty(model.getPhoto())) {
-                byte[] bitmapArray = Base64.decode(model.getPhoto().split(",")[1], Base64.DEFAULT);
+                holder.iv_photo.setImageURI(model.getPhoto());
+
+                /*byte[] bitmapArray = Base64.decode(model.getPhoto().split(",")[1], Base64.DEFAULT);
                 Bitmap bitmap = BitmapFactory.decodeByteArray(bitmapArray, 0, bitmapArray.length);
-                holder.iv_photo.setImageBitmap(bitmap);
+                holder.iv_photo.setImageBitmap(bitmap);*/
+            } else {
+                holder.iv_photo.setImageDrawable(mContext.getResources().getDrawable(mContext.getResources().getIdentifier("pachain_candidate_defaultphoto", "drawable", mContext.getPackageName())));
             }
             if (model.getVoteRate() > -1) {
                 holder.ll_rate.setVisibility(View.VISIBLE);
@@ -137,7 +138,7 @@ public class BallotResultAdapter extends BaseAdapter {
         TextView tv_seatName;
 
         LinearLayout ll_candidate;
-        ImageView iv_photo;
+        SimpleDraweeView iv_photo;
         TextView tv_party;
         TextView tv_name;
         LinearLayout ll_voteResult;

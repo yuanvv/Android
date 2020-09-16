@@ -60,8 +60,8 @@ public class PAChainBallotActivity extends Activity implements View.OnClickListe
             try {
                 JSONArray votes = new JSONArray(localVotes.get(ballot.getNumber().toLowerCase()));
                 ballot.setVoted(true);
-                JSONObject vote;
-                JSONArray candidateIDs;
+                JSONObject vote, candidate;
+                JSONArray candidates;
                 for (CandidateEntity candidateEntity : ballot.getCandidates()) {
                     if (candidateEntity.getID() < 1 && candidateEntity.getSeatID() < 1 && candidateEntity.getElectionID() > 0) {
                         candidateEntity.setVoted(true);
@@ -69,9 +69,10 @@ public class PAChainBallotActivity extends Activity implements View.OnClickListe
                         candidateEntity.setVoting(false);
                         for (int m = 0; m < votes.length(); m++) {
                             vote = votes.getJSONObject(m);
-                            candidateIDs = new JSONArray(vote.getString("candidateIDs"));
-                            for (int d = 0; d < candidateIDs.length(); d++) {
-                                if (candidateIDs.getInt(d) == candidateEntity.getID()
+                            candidates = new JSONArray(vote.getString("candidates"));
+                            for (int d = 0; d < candidates.length(); d++) {
+                                candidate = candidates.getJSONObject(d);
+                                if (candidate.getInt("id") == candidateEntity.getID()
                                     && candidateEntity.getElectionID() == vote.getInt("electionID")
                                     && candidateEntity.getSeatID() == vote.getInt("seatID")) {
                                     candidateEntity.setVoted(true);
@@ -112,8 +113,8 @@ public class PAChainBallotActivity extends Activity implements View.OnClickListe
             finish();
         } else if (v.getId() == getResources().getIdentifier("tv_done", "id", getPackageName())) {
             votes = new JSONArray();
-            JSONArray checkedCandidateIDs = new JSONArray();
-            JSONObject voteObject;
+            JSONArray checkedCandidates = new JSONArray();
+            JSONObject voteObject, candidateObject;
             int unCheckCount = 0;
             int checkEveryCount = 0;
             int lastSeatID = 0, lastSeatVoteLimit = 0, lastElectionID = 0;
@@ -126,13 +127,13 @@ public class PAChainBallotActivity extends Activity implements View.OnClickListe
                         }
                         checkEveryCount = 0;
                     }
-                    if (lastSeatID > 0 && lastSeatID != candidateEntity.getSeatID() && checkedCandidateIDs != null && checkedCandidateIDs.length() > 0) {
+                    if (lastSeatID > 0 && lastSeatID != candidateEntity.getSeatID() && checkedCandidates != null && checkedCandidates.length() > 0) {
                         try {
                             boolean exists = false;
                             for (int m = 0; m < votes.length(); m++) {
                                 if (votes.getJSONObject(m).getInt("electionID") == lastElectionID && votes.getJSONObject(m).getInt("seatID") == lastSeatID) {
                                     exists = true;
-                                    votes.getJSONObject(m).put("candidateIDs", checkedCandidateIDs);
+                                    votes.getJSONObject(m).put("candidates", checkedCandidates);
                                     break;
                                 }
                             }
@@ -140,30 +141,37 @@ public class PAChainBallotActivity extends Activity implements View.OnClickListe
                                 voteObject = new JSONObject();
                                 voteObject.put("electionID", lastElectionID);
                                 voteObject.put("seatID", lastSeatID);
-                                voteObject.put("candidateIDs", checkedCandidateIDs);
+                                voteObject.put("candidates", checkedCandidates);
                                 votes.put(voteObject);
                             }
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
-                        checkedCandidateIDs = new JSONArray();
+                        checkedCandidates = new JSONArray();
                     }
                     if (candidateEntity.isVoted()) {
                         checkEveryCount++;
-                        checkedCandidateIDs.put(candidateEntity.getID());
+                        candidateObject = new JSONObject();
+                        try {
+                            candidateObject.put("id", candidateEntity.getID());
+                            candidateObject.put("name", candidateEntity.getName());
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                        checkedCandidates.put(candidateObject);
                     }
                     lastSeatID = candidateEntity.getSeatID();
                     lastSeatVoteLimit = 1;
                     lastElectionID = candidateEntity.getElectionID();
                 }
                 if (i == adapter.getCount() - 1) {
-                    if (checkedCandidateIDs != null && checkedCandidateIDs.length() > 0) {
+                    if (checkedCandidates != null && checkedCandidates.length() > 0) {
                         try {
                             boolean exists = false;
                             for (int m = 0; m < votes.length(); m++) {
                                 if (votes.getJSONObject(m).getInt("electionID") == lastElectionID && votes.getJSONObject(m).getInt("seatID") == lastSeatID) {
                                     exists = true;
-                                    votes.getJSONObject(m).put("candidateIDs", checkedCandidateIDs);
+                                    votes.getJSONObject(m).put("candidates", checkedCandidates);
                                     break;
                                 }
                             }
@@ -171,7 +179,7 @@ public class PAChainBallotActivity extends Activity implements View.OnClickListe
                                 voteObject = new JSONObject();
                                 voteObject.put("electionID", lastElectionID);
                                 voteObject.put("seatID", lastSeatID);
-                                voteObject.put("candidateIDs", checkedCandidateIDs);
+                                voteObject.put("candidates", checkedCandidates);
                                 votes.put(voteObject);
                             }
                         } catch (JSONException e) {
@@ -216,8 +224,8 @@ public class PAChainBallotActivity extends Activity implements View.OnClickListe
         Bundle bundle = data.getExtras();
         if (bundle.containsKey("votedSuccess") && bundle.getBoolean("votedSuccess")) {
             try {
-                JSONObject vote;
-                JSONArray candidateIDs;
+                JSONObject vote, candidate;
+                JSONArray candidates;
                 for (CandidateEntity candidateEntity : ballot.getCandidates()) {
                     if (candidateEntity.getID() < 1 && candidateEntity.getSeatID() < 1 && candidateEntity.getElectionID() > 0) {
                         candidateEntity.setVoted(true);
@@ -226,9 +234,10 @@ public class PAChainBallotActivity extends Activity implements View.OnClickListe
                         candidateEntity.setVoting(false);
                         for (int m = 0; m < votes.length(); m++) {
                             vote = votes.getJSONObject(m);
-                            candidateIDs = new JSONArray(vote.getString("candidateIDs"));
-                            for (int d = 0; d < candidateIDs.length(); d++) {
-                                if (candidateIDs.getInt(d) == candidateEntity.getID()
+                            candidates = new JSONArray(vote.getString("candidates"));
+                            for (int d = 0; d < candidates.length(); d++) {
+                                candidate = candidates.getJSONObject(d);
+                                if (candidate.getInt("id") == candidateEntity.getID()
                                     && candidateEntity.getElectionID() == vote.getInt("electionID")
                                     && candidateEntity.getSeatID() == vote.getInt("seatID")) {
                                     candidateEntity.setVoted(true);

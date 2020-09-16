@@ -10,21 +10,19 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.DatePicker;
 import android.widget.LinearLayout;
-import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.pachain.android.adapter.CountyAdapter;
 import com.pachain.android.adapter.PrecinctAdapter;
 import com.pachain.android.adapter.StateAdapter;
-import com.pachain.android.adapter.VotedResultsAdapter;
-import com.pachain.android.adapter.VotedVotersAdapter;
+import com.pachain.android.adapter.VotedResultRecycleAdapter;
+import com.pachain.android.adapter.VotedVoterRecycleAdapter;
 import com.pachain.android.common.DataToolPackage;
 import com.pachain.android.common.PostApi;
 import com.pachain.android.common.ToolPackage;
 import com.pachain.android.config.Config;
 import com.pachain.android.entity.BallotEntity;
-import com.pachain.android.entity.CandidateEntity;
 import com.pachain.android.entity.CountyEntity;
 import com.pachain.android.entity.PrecinctEntity;
 import com.pachain.android.entity.StateEntity;
@@ -34,17 +32,18 @@ import com.pachain.android.entity.VoterEntity;
 import com.pachain.android.tool.DBManager;
 import com.pachain.android.util.SPUtils;
 import com.pachain.android.util.Secp256k1Util;
+import com.pachain.xrecyclerview.XRecyclerView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.net.URLEncoder;
 import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.LinearLayoutManager;
 
 public class PAChainViewVotingProgressActivity extends Activity implements View.OnClickListener, DatePicker.OnDateChangedListener {
     private TextView tv_back;
@@ -60,12 +59,15 @@ public class PAChainViewVotingProgressActivity extends Activity implements View.
     private LinearLayout ll_end;
     private TextView tv_end;
     private DatePicker dp_end;
+    private LinearLayout ll_officesSeats;
+    private LinearLayout ll_offices;
+    private Spinner sp_offices;
     private LinearLayout ll_seats;
     private Spinner sp_seats;
     private TextView tv_go;
     private TextView tv_total;
-    private ListView lv_votedVoters;
-    private ListView lv_votedResults;
+    private XRecyclerView rv_votedVoters;
+    private XRecyclerView rv_votedResults;
     private TextView tv_none;
 
     private ProgressDialog progressDialog;
@@ -77,10 +79,10 @@ public class PAChainViewVotingProgressActivity extends Activity implements View.
 
     private VoterEntity registeredVoter;
     private BallotEntity ballot;
-    private VotedVotersAdapter votedVotersAdapter;
+    private VotedVoterRecycleAdapter votedVoterRecycleAdapter;
     private ArrayList<VotedVoterEntity> votedVoters;
     private int totalCount;
-    private VotedResultsAdapter votedResultsAdapter;
+    private VotedResultRecycleAdapter votedResultRecycleAdapter;
     private ArrayList<VotedResultEntity> votedResults;
 
     private ArrayList<StateEntity> states;
@@ -93,9 +95,12 @@ public class PAChainViewVotingProgressActivity extends Activity implements View.
     private PrecinctAdapter precinctAdapter;
     private int stateChangeCount;
     private int countyChangeCount;
+    private StateAdapter officeAdapter;
     private StateAdapter seatAdapter;
+    private HashMap<String, ArrayList<StateEntity>> allOffices;
+    private ArrayList<StateEntity> offices;
+    private HashMap<String, ArrayList<StateEntity>> allSeats;
     private ArrayList<StateEntity> seats;
-    private HashMap<String, CandidateEntity> candidates;
     private StateEntity stateEntity;
     private HashMap<String, String> votedKeys;
 
@@ -104,7 +109,10 @@ public class PAChainViewVotingProgressActivity extends Activity implements View.
     private String precinct;
     private int startYear, startMonth, startDay;
     private int toYear, toMonth, toDay;
+    private String office;
     private int seatID;
+    private int pageRowCount;
+    private int page;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -117,7 +125,10 @@ public class PAChainViewVotingProgressActivity extends Activity implements View.
         stateChangeCount = 0;
         countyChangeCount = 0;
         totalCount = 0;
+        office = "";
         seatID = 0;
+        pageRowCount = 15;
+        page = 0;
         Calendar calendar = Calendar.getInstance();
         startYear = calendar.get(calendar.YEAR);
         startMonth = calendar.get(calendar.MONTH) + 1;
@@ -128,8 +139,10 @@ public class PAChainViewVotingProgressActivity extends Activity implements View.
         votedVoters = new ArrayList<>();
         votedResults = new ArrayList<>();
         stateCounties = new ArrayList<>();
+        allOffices = new HashMap<>();
+        offices = new ArrayList<>();
+        allSeats = new HashMap<>();
         seats = new ArrayList<>();
-        candidates = new HashMap<>();
 
         Bundle bundle = getIntent().getExtras();
         ballot = bundle != null && bundle.containsKey("ballot") ? (BallotEntity) getIntent().getExtras().getSerializable("ballot") : null;
@@ -185,6 +198,24 @@ public class PAChainViewVotingProgressActivity extends Activity implements View.
                     getCountiesByState(state);
                     sp_county.setSelection(1, false);
                     sp_county.setSelection(0, true);
+
+                    office = "";
+                    if (offices != null && offices.size() > 1) {
+                        sp_offices.setSelection(1, false);
+                    }
+                    offices.clear();
+                    if (allOffices.containsKey(getResources().getString(getResources().getIdentifier("common_us", "string", getPackageName())))) {
+                        offices.addAll(allOffices.get(getResources().getString(getResources().getIdentifier("common_us", "string", getPackageName()))));
+                    }
+                    if (allOffices.containsKey(state)) {
+                        offices.addAll(allOffices.get(state));
+                    }
+                    officeAdapter.notifyDataSetChanged();
+                    if (offices != null && offices.size() > 1) {
+                        sp_offices.setSelection(1, false);
+                        sp_offices.setSelection(0, true);
+                    }
+                    office = offices != null && offices.size() > 0 ? offices.get(0).getCode() : "";
                 }
             }
             @Override
@@ -242,19 +273,60 @@ public class PAChainViewVotingProgressActivity extends Activity implements View.
         ll_end = findViewById(getResources().getIdentifier("ll_end", "id", getPackageName()));
         ll_end.setOnClickListener(this);
         tv_end = findViewById(getResources().getIdentifier("tv_end", "id", getPackageName()));
+
+
+        ll_officesSeats = findViewById(getResources().getIdentifier("ll_officesSeats", "id", getPackageName()));
+        ll_offices = findViewById(getResources().getIdentifier("ll_offices", "id", getPackageName()));
+        sp_offices = findViewById(getResources().getIdentifier("sp_offices", "id", getPackageName()));
         ll_seats = findViewById(getResources().getIdentifier("ll_seats", "id", getPackageName()));
         sp_seats = findViewById(getResources().getIdentifier("sp_seats", "id", getPackageName()));
 
         tv_go = findViewById(getResources().getIdentifier("tv_go", "id", getPackageName()));
         tv_go.setOnClickListener(this);
         tv_total = findViewById(getResources().getIdentifier("tv_total", "id", getPackageName()));
-        lv_votedVoters = findViewById(getResources().getIdentifier("lv_votedVoters", "id", getPackageName()));
-        votedVotersAdapter = new VotedVotersAdapter(this, votedVoters);
-        lv_votedVoters.setAdapter(votedVotersAdapter);
 
-        lv_votedResults = findViewById(getResources().getIdentifier("lv_votedResults", "id", getPackageName()));
-        votedResultsAdapter = new VotedResultsAdapter(this, votedResults);
-        lv_votedResults.setAdapter(votedResultsAdapter);
+        rv_votedVoters = findViewById(getResources().getIdentifier("rv_votedVoters", "id", getPackageName()));
+        votedVoterRecycleAdapter = new VotedVoterRecycleAdapter(this, votedVoters);
+        LinearLayoutManager voterManager = new LinearLayoutManager(this);
+        voterManager.setOrientation(LinearLayoutManager.VERTICAL);
+        rv_votedVoters.setLayoutManager(voterManager);
+        rv_votedVoters.setAdapter(votedVoterRecycleAdapter);
+        rv_votedVoters.setPullRefreshEnabled(false);
+        rv_votedVoters.setLoadingMoreEnabled(false);
+        rv_votedVoters.setLoadingListener(new XRecyclerView.LoadingListener() {
+            @Override
+            public void onRefresh() {
+                //refresh data here
+            }
+
+            @Override
+            public void onLoadMore() {
+                // load more data here
+                page++;
+                getVotedVoters(state, county, precinct);
+            }
+        });
+
+        rv_votedResults = findViewById(getResources().getIdentifier("rv_votedResults", "id", getPackageName()));
+        votedResultRecycleAdapter = new VotedResultRecycleAdapter(this, votedResults);
+        LinearLayoutManager resultsManager = new LinearLayoutManager(this);
+        resultsManager.setOrientation(LinearLayoutManager.VERTICAL);
+        rv_votedResults.setLayoutManager(resultsManager);
+        rv_votedResults.setAdapter(votedResultRecycleAdapter);
+        rv_votedResults.setPullRefreshEnabled(false);
+        rv_votedResults.setLoadingListener(new XRecyclerView.LoadingListener() {
+            @Override
+            public void onRefresh() {
+                //refresh data here
+            }
+
+            @Override
+            public void onLoadMore() {
+                // load more data here
+                page++;
+                getVoterResults(state, county, precinct, seatID);
+            }
+        });
 
         tv_none = findViewById(getResources().getIdentifier("tv_none", "id", getPackageName()));
 
@@ -303,18 +375,31 @@ public class PAChainViewVotingProgressActivity extends Activity implements View.
             tv_electionName.setText(ballot.getName());
             tv_electionDay.setText(ballot.getDate());
             if (ballot.isStartCounting()) {
-                ll_seats.setVisibility(View.VISIBLE);
-                for (CandidateEntity entity : ballot.getCandidates()) {
-                    if (entity.getElectionID() > 0 && entity.getSeatID() > 0 && entity.getID() > 0) {
-                        candidates.put(entity.getID() + "", entity);
-                    } else if (entity.getSeatID() > 0) {
-                        stateEntity = new StateEntity();
-                        stateEntity.setID(entity.getSeatID());
-                        stateEntity.setCode("");
-                        stateEntity.setName(entity.getSeatName());
-                        seats.add(stateEntity);
+                ll_officesSeats.setVisibility(View.VISIBLE);
+                officeAdapter = new StateAdapter(this, offices);
+                sp_offices.setAdapter(officeAdapter);
+                sp_offices.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                        StateEntity model = (StateEntity) officeAdapter.getItem(i);
+                        office = model.getCode();
+                        seatID = 0;
+                        if (seats != null && seats.size() > 1) {
+                            sp_seats.setSelection(1, false);
+                        }
+                        seats.clear();
+                        seats.addAll(allSeats.get(office));
+                        seatAdapter.notifyDataSetChanged();
+                        if (seats != null && seats.size() > 1) {
+                            sp_seats.setSelection(1, false);
+                            sp_seats.setSelection(0, true);
+                        }
+                        seatID = seats != null && seats.size() > 0 ? seats.get(0).getID() : 0;
                     }
-                }
+                    @Override
+                    public void onNothingSelected(AdapterView<?> adapterView) { }
+                });
+
                 seatAdapter = new StateAdapter(this, seats);
                 sp_seats.setAdapter(seatAdapter);
                 sp_seats.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -327,8 +412,9 @@ public class PAChainViewVotingProgressActivity extends Activity implements View.
                     public void onNothingSelected(AdapterView<?> adapterView) { }
                 });
 
-                getVoterResults(registeredVoter.getState(), registeredVoter.getCounty(), registeredVoter.getPrecinctNumber(), seats.get(0).getID());
+                getSeats();
             } else {
+                showProgressDialog();
                 getVotedVoters(registeredVoter.getState(), registeredVoter.getCounty(), registeredVoter.getPrecinctNumber());
             }
         }
@@ -366,7 +452,6 @@ public class PAChainViewVotingProgressActivity extends Activity implements View.
     }
 
     private void getVotedVoters(String state, String county, String precinct) {
-        showProgressDialog();
         List<String> params = new ArrayList<>();
         String accessToken = SPUtils.getString(PAChainViewVotingProgressActivity.this, "accessToken", "");
         params.add("accessToken=" + URLEncoder.encode(accessToken));
@@ -379,6 +464,8 @@ public class PAChainViewVotingProgressActivity extends Activity implements View.
             params.add("&precinctNumber=" + URLEncoder.encode(precinct));
             params.add("&start=" + ToolPackage.ConvertToCommonStringByDate(tv_start.getText().toString().replace(getResources().getString(getResources().getIdentifier("viewVotingProgress_dateStart", "string", getPackageName())), "")));
             params.add("&end=" + ToolPackage.ConvertToCommonStringByDate(tv_end.getText().toString().replace(getResources().getString(getResources().getIdentifier("viewVotingProgress_dateTo", "string", getPackageName())), "")));
+            params.add("&limit=" + pageRowCount);
+            params.add("&offset=" + pageRowCount * page);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -397,7 +484,9 @@ public class PAChainViewVotingProgressActivity extends Activity implements View.
                         JSONArray votesArray = new JSONArray(response.getString("data"));
                         VotedVoterEntity entity;
                         JSONObject object;
-                        votedVoters.clear();
+                        if (page == 0 && votedVoters != null && votedVoters.size() > 0) {
+                            votedVoters.clear();
+                        }
                         for (int i = 0; i < votesArray.length(); i++) {
                             object = votesArray.getJSONObject(i);
                             entity = new VotedVoterEntity();
@@ -410,23 +499,35 @@ public class PAChainViewVotingProgressActivity extends Activity implements View.
                             votedVoters.add(entity);
                         }
                         if (votedVoters != null && votedVoters.size() > 0) {
-                            entity = new VotedVoterEntity();
-                            entity.setState(getResources().getString(getResources().getIdentifier("viewVotingProgress_state", "string", getPackageName())));
-                            entity.setCounty(getResources().getString(getResources().getIdentifier("viewVotingProgress_county", "string", getPackageName())));
-                            entity.setPrecinctNumber(getResources().getString(getResources().getIdentifier("viewVotingProgress_precinct", "string", getPackageName())));
-                            entity.setVotingDate(getResources().getString(getResources().getIdentifier("viewVotingProgress_date", "string", getPackageName())));
-                            entity.setVotedCount(getResources().getString(getResources().getIdentifier("viewVotingProgress_count", "string", getPackageName())));
-                            votedVoters.add(0, entity);
-                            votedVotersAdapter.notifyDataSetChanged();
+                            if (page == 0) {
+                                entity = new VotedVoterEntity();
+                                entity.setState(getResources().getString(getResources().getIdentifier("viewVotingProgress_state", "string", getPackageName())));
+                                entity.setCounty(getResources().getString(getResources().getIdentifier("viewVotingProgress_county", "string", getPackageName())));
+                                entity.setPrecinctNumber(getResources().getString(getResources().getIdentifier("viewVotingProgress_precinct", "string", getPackageName())));
+                                entity.setVotingDate(getResources().getString(getResources().getIdentifier("viewVotingProgress_date", "string", getPackageName())));
+                                entity.setVotedCount(getResources().getString(getResources().getIdentifier("viewVotingProgress_count", "string", getPackageName())));
+                                votedVoters.add(0, entity);
+
+                                if (votesArray.length() >= pageRowCount) {
+                                    rv_votedVoters.setLoadingMoreEnabled(true);
+                                } else {
+                                    rv_votedVoters.setLoadingMoreEnabled(false);
+                                }
+                            }
+                            votedVoterRecycleAdapter.notifyDataSetChanged();
 
                             tv_none.setVisibility(View.GONE);
                             tv_total.setText(getResources().getString(getResources().getIdentifier("viewVotingProgress_total", "string", getPackageName())) + " " + totalCount);
                             tv_total.setVisibility(View.VISIBLE);
-                            lv_votedVoters.setVisibility(View.VISIBLE);
+                            rv_votedVoters.setVisibility(View.VISIBLE);
+
+                            if (votesArray.length() < pageRowCount) {
+                                rv_votedVoters.setNoMore(true);
+                            }
                         } else {
                             tv_none.setVisibility(View.VISIBLE);
                             tv_total.setVisibility(View.GONE);
-                            lv_votedVoters.setVisibility(View.GONE);
+                            rv_votedVoters.setVisibility(View.GONE);
                         }
                     } else {
                         Toast.makeText(PAChainViewVotingProgressActivity.this, json.getString("error"), Toast.LENGTH_LONG).show();
@@ -435,19 +536,20 @@ public class PAChainViewVotingProgressActivity extends Activity implements View.
                     Toast.makeText(PAChainViewVotingProgressActivity.this, e.getMessage(), Toast.LENGTH_LONG).show();
                 }
                 closeProgressDialog();
+                rv_votedVoters.loadMoreComplete();
             }
 
             @Override
             public void onFailed(String error) {
                 Toast.makeText(PAChainViewVotingProgressActivity.this, error, Toast.LENGTH_LONG).show();
                 closeProgressDialog();
+                rv_votedVoters.loadMoreComplete();
             }
         });
         api.call();
     }
 
     private void getVoterResults(String state, String county, String precinct, int seatID) {
-        showProgressDialog();
         List<String> params = new ArrayList<>();
         String accessToken = SPUtils.getString(PAChainViewVotingProgressActivity.this, "accessToken", "");
         params.add("accessToken=" + URLEncoder.encode(accessToken));
@@ -460,6 +562,8 @@ public class PAChainViewVotingProgressActivity extends Activity implements View.
             params.add("&precinctNumber=" + URLEncoder.encode(precinct));
             params.add("&start=" + ToolPackage.ConvertToCommonStringByDate(tv_start.getText().toString().replace(getResources().getString(getResources().getIdentifier("viewVotingProgress_dateStart", "string", getPackageName())), "")));
             params.add("&end=" + ToolPackage.ConvertToCommonStringByDate(tv_end.getText().toString().replace(getResources().getString(getResources().getIdentifier("viewVotingProgress_dateTo", "string", getPackageName())), "")));
+            params.add("&limit=" + pageRowCount);
+            params.add("&offset=" + pageRowCount * page);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -478,35 +582,48 @@ public class PAChainViewVotingProgressActivity extends Activity implements View.
                         JSONArray votesArray = new JSONArray(response.getString("data"));
                         VotedResultEntity entity;
                         JSONObject object;
-                        votedResults.clear();
+                        if (page == 0 && votedResults != null && votedResults.size() > 0) {
+                            votedResults.clear();
+                        }
                         for (int i = 0; i < votesArray.length(); i++) {
                             object = votesArray.getJSONObject(i);
                             entity = new VotedResultEntity();
                             entity.setKey(object.getString("key"));
                             entity.setVerificationCode(object.getString("verificationCode"));
                             entity.setVotingResult(object.getString("candidateID"));
-                            entity.setVotingResult(candidates.containsKey(entity.getVotingResult()) ? candidates.get(entity.getVotingResult()).getName() : "");
+                            entity.setVotingResult(object.has("candidateName") ? object.getString("candidateName") : "");
                             entity.setVotingDate(ToolPackage.ConvertToSimpleStringByTime(object.getString("votingDate")));
                             entity.setSelected(votedKeys.containsKey(entity.getKey()) ? true : false);
                             votedResults.add(entity);
                         }
                         if (votedResults != null && votedResults.size() > 0) {
-                            entity = new VotedResultEntity();
-                            entity.setKey(getResources().getString(getResources().getIdentifier("viewVotingProgress_voter", "string", getPackageName())));
-                            entity.setVotingResult(getResources().getString(getResources().getIdentifier("viewVotingProgress_votingResult", "string", getPackageName())));
-                            entity.setVerificationCode(getResources().getString(getResources().getIdentifier("viewVotingProgress_verificationCode", "string", getPackageName())));
-                            entity.setVotingDate(getResources().getString(getResources().getIdentifier("viewVotingProgress_date", "string", getPackageName())));
-                            votedResults.add(0, entity);
-                            votedResultsAdapter.notifyDataSetChanged();
+                            if (page == 0) {
+                                entity = new VotedResultEntity();
+                                entity.setKey(getResources().getString(getResources().getIdentifier("viewVotingProgress_voter", "string", getPackageName())));
+                                entity.setVotingResult(getResources().getString(getResources().getIdentifier("viewVotingProgress_votingResult", "string", getPackageName())));
+                                entity.setVerificationCode(getResources().getString(getResources().getIdentifier("viewVotingProgress_verificationCode", "string", getPackageName())));
+                                entity.setVotingDate(getResources().getString(getResources().getIdentifier("viewVotingProgress_date", "string", getPackageName())));
+                                votedResults.add(0, entity);
+
+                                if (votesArray.length() >= pageRowCount) {
+                                    rv_votedResults.setLoadingMoreEnabled(true);
+                                } else {
+                                    rv_votedResults.setLoadingMoreEnabled(false);
+                                }
+                            }
+                            votedResultRecycleAdapter.notifyDataSetChanged();
 
                             tv_none.setVisibility(View.GONE);
                             tv_total.setText(getResources().getString(getResources().getIdentifier("viewVotingProgress_total", "string", getPackageName())) + " " + totalCount);
                             tv_total.setVisibility(View.VISIBLE);
-                            lv_votedResults.setVisibility(View.VISIBLE);
+                            rv_votedResults.setVisibility(View.VISIBLE);
+                            if (votesArray.length() < pageRowCount) {
+                                rv_votedResults.setNoMore(true);
+                            }
                         } else {
                             tv_none.setVisibility(View.VISIBLE);
                             tv_total.setVisibility(View.GONE);
-                            lv_votedResults.setVisibility(View.GONE);
+                            rv_votedResults.setVisibility(View.GONE);
                         }
                     } else {
                         Toast.makeText(PAChainViewVotingProgressActivity.this, json.getString("error"), Toast.LENGTH_LONG).show();
@@ -515,12 +632,97 @@ public class PAChainViewVotingProgressActivity extends Activity implements View.
                     Toast.makeText(PAChainViewVotingProgressActivity.this, e.getMessage(), Toast.LENGTH_LONG).show();
                 }
                 closeProgressDialog();
+                rv_votedResults.loadMoreComplete();
             }
 
             @Override
             public void onFailed(String error) {
                 Toast.makeText(PAChainViewVotingProgressActivity.this, error, Toast.LENGTH_LONG).show();
                 closeProgressDialog();
+                rv_votedResults.loadMoreComplete();
+            }
+        });
+        api.call();
+    }
+
+    private void getSeats() {
+        showProgressDialog();
+        List<String> params = new ArrayList<>();
+        String accessToken = SPUtils.getString(PAChainViewVotingProgressActivity.this, "accessToken", "");
+        params.add("accessToken=" + URLEncoder.encode(accessToken));
+        try {
+            params.add("&signature=" + URLEncoder.encode(ecKeyUtil.signByPrivateKey(SPUtils.getString(PAChainViewVotingProgressActivity.this, "accessToken", ""), (PrivateKey) ecKey.get("privateKey"))));
+            params.add("&electionID=" + URLEncoder.encode(ballot.getElection()));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        PostApi api = new PostApi(Config.GETSEATS, params);
+        api.setOnApiListener(new PostApi.onApiListener() {
+            @Override
+            public void onExecute(String content) { }
+
+            @Override
+            public void onSuccessed(String successed) {
+                try {
+                    JSONObject json = new JSONObject(successed);
+                    if (json.getBoolean("ret")) {
+                        String responseEncrypt = json.getString("response");
+                        JSONObject response = new JSONObject(ecKeyUtil.decryptByPrivateKey(responseEncrypt, (PrivateKey) ecKey.get("privateKey")));
+                        if (response.getBoolean("ret")) {
+                            JSONObject object;
+                            JSONArray seatsArray = new JSONArray(response.getString("data"));
+                            StateEntity office;
+                            StateEntity seat;
+                            String officeKey, state;
+                            for (int i = 0; i < seatsArray.length(); i++) {
+                                object = seatsArray.getJSONObject(i);
+                                state = object.getString("state");
+                                officeKey = state + "_" + object.getString("office");
+                                if (!allSeats.containsKey(officeKey)) {
+                                    office = new StateEntity();
+                                    office.setID(1);
+                                    office.setCode(officeKey);
+                                    office.setName(object.getString("office"));
+                                    if (!allOffices.containsKey(state)) {
+                                        allOffices.put(state, new ArrayList<StateEntity>());
+                                    }
+                                    allOffices.get(state).add(office);
+                                    allSeats.put(officeKey, new ArrayList<StateEntity>());
+                                }
+                                seat = new StateEntity();
+                                seat.setID(object.getInt("seatid"));
+                                seat.setName(TextUtils.isEmpty(object.getString("number")) ? "" : object.getString("name"));
+                                allSeats.get(officeKey).add(seat);
+                            }
+                        }
+                    } else {
+                        Toast.makeText(PAChainViewVotingProgressActivity.this, json.getString("error"), Toast.LENGTH_LONG).show();
+                    }
+                } catch (Exception e) {
+                    Toast.makeText(PAChainViewVotingProgressActivity.this, e.getMessage(), Toast.LENGTH_LONG).show();
+                }
+
+                offices.clear();
+                if (allOffices != null && allOffices.size() > 0) {
+                    if (allOffices.containsKey(getResources().getString(getResources().getIdentifier("common_us", "string", getPackageName())))) {
+                        offices.addAll(allOffices.get(getResources().getString(getResources().getIdentifier("common_us", "string", getPackageName()))));
+                    }
+                    if (allOffices.containsKey(registeredVoter.getState())) {
+                        offices.addAll(allOffices.get(registeredVoter.getState()));
+                    }
+                }
+                seats.clear();
+                if (allSeats != null && allSeats.size() > 0) {
+                    seats.addAll(allSeats.get(offices.get(0).getCode()));
+                }
+                seatAdapter.notifyDataSetChanged();
+                officeAdapter.notifyDataSetChanged();
+                getVoterResults(registeredVoter.getState(), registeredVoter.getCounty(), registeredVoter.getPrecinctNumber(), seats.get(0).getID());
+            }
+
+            @Override
+            public void onFailed(String error) {
+                Toast.makeText(PAChainViewVotingProgressActivity.this, error, Toast.LENGTH_LONG).show();
             }
         });
         api.call();
@@ -532,9 +734,12 @@ public class PAChainViewVotingProgressActivity extends Activity implements View.
             finish();
         } else if (v.getId() == getResources().getIdentifier("tv_go", "id", getPackageName())) {
             if (ballot != null) {
+                page = 0;
                 if (ballot.isStartCounting()) {
+                    showProgressDialog();
                     getVoterResults(state, county, precinct, seatID);
                 } else {
+                    showProgressDialog();
                     getVotedVoters(state, county, precinct);
                 }
             }

@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Base64;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -108,6 +109,9 @@ public class PAChainVerifyVoteActivity extends AppCompatActivity implements View
                 entity.setParams(params);
                 if (params.get("verified").equals("true")) {
                     ll_toolBar.setVisibility(View.GONE);
+                    RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    layoutParams.setMargins(0, 0, 0, 0);
+                    lv_contents.setLayoutParams(layoutParams);
                 }
                 break;
             }
@@ -119,8 +123,8 @@ public class PAChainVerifyVoteActivity extends AppCompatActivity implements View
             try {
                 JSONArray votes = new JSONArray(localVotes.get(ballot.getNumber().toLowerCase()));
                 ballot.setVoted(true);
-                JSONObject vote;
-                JSONArray candidateIDs;
+                JSONObject vote, candidate;
+                JSONArray candidates;
                 for (CandidateEntity candidateEntity : ballot.getCandidates()) {
                     if (candidateEntity.getID() < 1 && candidateEntity.getSeatID() < 1 && candidateEntity.getElectionID() > 0) {
                         candidateEntity.setVoted(true);
@@ -128,11 +132,12 @@ public class PAChainVerifyVoteActivity extends AppCompatActivity implements View
                         candidateEntity.setVoting(false);
                         for (int m = 0; m < votes.length(); m++) {
                             vote = votes.getJSONObject(m);
-                            candidateIDs = new JSONArray(vote.getString("candidateIDs"));
-                            for (int d = 0; d < candidateIDs.length(); d++) {
-                                if (candidateIDs.getInt(d) == candidateEntity.getID()
-                                        && candidateEntity.getElectionID() == vote.getInt("electionID")
-                                        && candidateEntity.getSeatID() == vote.getInt("seatID")) {
+                            candidates = new JSONArray(vote.getString("candidates"));
+                            for (int d = 0; d < candidates.length(); d++) {
+                                candidate = candidates.getJSONObject(d);
+                                if (candidate.getInt("id") == candidateEntity.getID()
+                                    && candidateEntity.getElectionID() == vote.getInt("electionID")
+                                    && candidateEntity.getSeatID() == vote.getInt("seatID")) {
                                     candidateEntity.setVoted(true);
                                 }
                             }
@@ -238,7 +243,7 @@ public class PAChainVerifyVoteActivity extends AppCompatActivity implements View
         } catch (Exception e) {
             e.printStackTrace();
         }
-        params.add("&to=+1" + registeredVoter.getCellPhone());
+        params.add("&to=1" + registeredVoter.getCellPhone());
         params.add("&message=" + verificationCode);
         PostApi api = new PostApi(Config.SENDVERIFICATIONCODE, params);
         api.setOnApiListener(new PostApi.onApiListener() {
@@ -302,6 +307,9 @@ public class PAChainVerifyVoteActivity extends AppCompatActivity implements View
                             rl_confirm.setVisibility(View.VISIBLE);
 
                             ll_toolBar.setVisibility(View.GONE);
+                            RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                            layoutParams.setMargins(0, 0, 0, 0);
+                            lv_contents.setLayoutParams(layoutParams);
                             for (CandidateEntity entity : ballot.getCandidates()) {
                                 if (entity.getID() < 1 && entity.getSeatID() < 1 && entity.getElectionID() > 0) {
                                     HashMap<String, String> params = new HashMap<>();

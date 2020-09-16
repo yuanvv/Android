@@ -34,7 +34,6 @@
                 android:id="@+id/sp_state"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginRight="-10dp"
                 android:layout_gravity="center_vertical"/>
         </LinearLayout>
         <LinearLayout
@@ -51,7 +50,6 @@
                 android:id="@+id/sp_county"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginRight="-10dp"
                 android:layout_gravity="center_vertical"/>
         </LinearLayout>
     </LinearLayout>

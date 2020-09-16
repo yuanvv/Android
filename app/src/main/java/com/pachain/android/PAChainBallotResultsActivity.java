@@ -22,6 +22,7 @@ import com.pachain.android.config.Config;
 import com.pachain.android.entity.BallotEntity;
 import com.pachain.android.entity.CandidateEntity;
 import com.pachain.android.entity.CountyEntity;
+import com.pachain.android.entity.PartyEntity;
 import com.pachain.android.entity.PrecinctEntity;
 import com.pachain.android.entity.StateEntity;
 import com.pachain.android.entity.VoterEntity;
@@ -57,6 +58,7 @@ public class PAChainBallotResultsActivity extends Activity implements View.OnCli
     private DBManager dbManager;
     private DataToolPackage dataToolPackage;
     private ProgressDialog progressDialog;
+    private HashMap<String, PartyEntity> parties;
     private ArrayList<StateEntity> states;
     private StateAdapter stateAdapter;
     private StateEntity stateEntity;
@@ -65,6 +67,7 @@ public class PAChainBallotResultsActivity extends Activity implements View.OnCli
     private CountyAdapter countyAdapter;
     private ArrayList<PrecinctEntity> precincts;
     private PrecinctAdapter precinctAdapter;
+    private ArrayList<CandidateEntity> candidates;
     private BallotResultAdapter adapter;
 
     private Secp256k1Util ecKeyUtil;
@@ -94,12 +97,17 @@ public class PAChainBallotResultsActivity extends Activity implements View.OnCli
         countyName = "";
         precinct = "";
         stateCounties = new ArrayList<>();
+        candidates = new ArrayList<>();
 
         Bundle bundle = getIntent().getExtras();
         ballot = bundle != null && bundle.containsKey("ballot") ? (BallotEntity) getIntent().getExtras().getSerializable("ballot") : null;
+        if (ballot != null) {
+            candidates = ballot.getCandidates();
+        }
         dbManager = DBManager.getIntance(getApplicationContext());
         dataToolPackage = new DataToolPackage(getApplicationContext(), dbManager);
         registeredVoter = dataToolPackage.getRegisteredVoter();
+        parties = dataToolPackage.getParties();
 
         states = dataToolPackage.getStates();
         if (states != null && states.size() > 0) {
@@ -138,7 +146,7 @@ public class PAChainBallotResultsActivity extends Activity implements View.OnCli
         tv_go = findViewById(getResources().getIdentifier("tv_go", "id", getPackageName()));
         tv_go.setOnClickListener(this);
         lv_contents = findViewById(getResources().getIdentifier("lv_contents", "id", getPackageName()));
-        adapter = new BallotResultAdapter(this, ballot.getCandidates());
+        adapter = new BallotResultAdapter(this, candidates);
         lv_contents.setAdapter(adapter);
 
         stateAdapter = new StateAdapter(this, states);
@@ -340,28 +348,75 @@ public class PAChainBallotResultsActivity extends Activity implements View.OnCli
                         HashMap<String, JSONObject> votedData = new HashMap<>();
                         JSONObject votedObject;
                         String candidateKey = "";
+                        CandidateEntity candidateEntity;
 
-                        for (int i = 0; i < votesArray.length(); i++) {
-                            object = votesArray.getJSONObject(i);
-                            votedData.put(object.getInt("electionID") + "_" + object.getInt("seatID") + "_" + object.getInt("candidateID"), object);
-                        }
-                        for (CandidateEntity candidateEntity : ballot.getCandidates()) {
-                            if (candidateEntity.getElectionID() > 0 && candidateEntity.getSeatID() > 0 && candidateEntity.getID() > 0) {
-                                candidateKey = candidateEntity.getElectionID() +"_" + candidateEntity.getSeatID() + "_" + candidateEntity.getID();
-                                if (votedData.containsKey(candidateKey)) {
-                                    votedObject = votedData.get(candidateKey);
-                                    candidateEntity.setVoteBallots(votedObject.getInt("count"));
-                                    candidateEntity.setVoteRate(response.getDouble("percent") * votedObject.getDouble("percent") * 100.0);
-                                } else {
-                                    candidateEntity.setVoteBallots(0);
-                                    candidateEntity.setVoteRate(0);
+                        candidates.clear();
+                        if (response.has("candidates")) {
+                            JSONArray seatsArray = new JSONArray(response.getString("candidates"));
+                            for (int m = 0; m < seatsArray.length(); m++) {
+                                JSONObject seatObject = seatsArray.getJSONObject(m);
+                                JSONObject seat = new JSONObject(seatObject.getString("seat"));
+                                candidateEntity = new CandidateEntity();
+                                candidateEntity.setSeatID(seat.getInt("seatid"));
+                                candidateEntity.setSeatOffice(seat.getString("office"));
+                                candidateEntity.setSeatNumber(seat.getString("number"));
+                                candidateEntity.setSeatName((!TextUtils.isEmpty(candidateEntity.getSeatNumber()) ? candidateEntity.getSeatOffice() + " " : "") + seat.getString("name"));
+                                candidateEntity.setSeatState(seat.getString("state"));
+                                candidateEntity.setSeatCounty(seat.getString("county"));
+                                candidateEntity.setSeatCity(seat.getString("city"));
+                                candidateEntity.setSeatLevel(seat.getInt("level"));
+                                candidates.add(candidateEntity);
+
+                                JSONArray candidatesArray = new JSONArray(seatObject.getString("candidates"));
+                                for (int n = 0; n < candidatesArray.length(); n++) {
+                                    JSONObject candidateObject = candidatesArray.getJSONObject(n);
+                                    candidateEntity = new CandidateEntity();
+                                    candidateEntity.setElectionID(Integer.parseInt(ballot.getElection()));
+                                    candidateEntity.setSeatID(seat.getInt("seatid"));
+                                    candidateEntity.setSeatName(seat.getString("name"));
+                                    candidateEntity.setSeatNumber(seat.getString("number"));
+                                    candidateEntity.setSeatState(seat.getString("state"));
+                                    candidateEntity.setSeatCounty(seat.getString("county"));
+                                    candidateEntity.setSeatCity(seat.getString("city"));
+                                    candidateEntity.setSeatOffice(seat.getString("office"));
+                                    candidateEntity.setSeatLevel(seat.getInt("level"));
+                                    candidateEntity.setID(candidateObject.getInt("candidateid"));
+                                    candidateEntity.setName(candidateObject.getString("name"));
+                                    candidateEntity.setParty(candidateObject.getString("party"));
+                                    candidateEntity.setPartyCode("");
+                                    if (parties.containsKey(candidateEntity.getParty().toLowerCase())) {
+                                        candidateEntity.setPartyCode(parties.get(candidateEntity.getParty().toLowerCase()).getCode());
+                                    }
+                                    if (!TextUtils.isEmpty(candidateEntity.getParty()) && TextUtils.isEmpty(candidateEntity.getPartyCode())) {
+                                        candidateEntity.setPartyCode("O");
+                                    }
+                                    candidateEntity.setPhoto(candidateObject.getString("photo"));
+                                    candidates.add(candidateEntity);
+                                }
+                            }
+
+                            for (int i = 0; i < votesArray.length(); i++) {
+                                object = votesArray.getJSONObject(i);
+                                votedData.put(object.getInt("electionID") + "_" + object.getInt("seatID") + "_" + object.getInt("candidateID"), object);
+                            }
+                            for (CandidateEntity candidate : candidates) {
+                                if (candidate.getElectionID() > 0 && candidate.getSeatID() > 0 && candidate.getID() > 0) {
+                                    candidateKey = candidate.getElectionID() + "_" + candidate.getSeatID() + "_" + candidate.getID();
+                                    if (votedData.containsKey(candidateKey)) {
+                                        votedObject = votedData.get(candidateKey);
+                                        candidate.setVoteBallots(votedObject.getInt("count"));
+                                        candidate.setVoteRate(response.getDouble("percent") * votedObject.getDouble("percent") * 100.0);
+                                    } else {
+                                        candidate.setVoteBallots(0);
+                                        candidate.setVoteRate(0);
+                                    }
                                 }
                             }
                         }
                         adapter.notifyDataSetChanged();
                         String votesStr = "";
                         String areaStr = "";
-                        votesStr = getResources().getString(getResources().getIdentifier("ballotResults_totalVotes", "string", getPackageName())) + " "+ ToolPackage.decimalFormat(response.getInt("voteCount"));
+                        votesStr = getResources().getString(getResources().getIdentifier("ballotResults_totalVotes", "string", getPackageName())) + " "+ ToolPackage.decimalFormat(response.getInt("votedCount"));
                         if (response.getDouble("percent") > 0) {
                             votesStr += " (" + (!TextUtils.isEmpty(precinct) ? getResources().getString(getResources().getIdentifier("viewVotingProgress_precinct", "string", getPackageName())) + " " + precinct + ": " + ToolPackage.doubleFormat(response.getDouble("percent") * 100.0) + "%" :
                                 ToolPackage.doubleFormat(response.getDouble("percent") * 100.0) + "% " + (!TextUtils.isEmpty(county) ? getResources().getString(getResources().getIdentifier("ballotResults_precinctsReporting", "string", getPackageName())) :

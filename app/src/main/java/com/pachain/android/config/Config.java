@@ -12,6 +12,7 @@ public class Config {
     public final static String BALLOTS = PROJECT_BASE_URL + CONTROLLER + "ballots/getballots";
     public final static String SAMPLEBALLOTS = PROJECT_BASE_URL + CONTROLLER + "ballots/getsampleballot";
     public final static String GETONIONKEYS = PROJECT_BASE_URL + CONTROLLER + "ballots/getonionkeys";
+    public final static String GETSEATS = PROJECT_BASE_URL + CONTROLLER + "ballots/queryseatsbyelectionid";
     public final static String VOTE = PROJECT_BASE_URL + CONTROLLER + "voted/vote";
     public final static String QUERYVOTEDVOTERS = PROJECT_BASE_URL + CONTROLLER + "voted/queryvoted";
     public final static String QUERYVOTERRESULTS = PROJECT_BASE_URL + CONTROLLER + "voted/queryvoteresult";

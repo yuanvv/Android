@@ -1,6 +1,6 @@
 apply plugin: 'com.android.application'
-apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
 
 android {
     compileSdkVersion 29
@@ -32,6 +32,8 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.1.0'
     implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
     implementation project(path: ':biometricmanagerlib')
+    implementation 'androidx.recyclerview:recyclerview:1.1.0'
+    implementation project(path: ':recyclerview')
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
@@ -39,6 +41,7 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation "com.madgag.spongycastle:prov:1.58.0.0"
     implementation 'com.facebook.fresco:fresco:0.12.0'
+    implementation 'androidx.annotation:annotation:1.1.0'
 }
 repositories {
     maven { url 'https://dl.bintray.com/kotlin/kotlin-eap' }

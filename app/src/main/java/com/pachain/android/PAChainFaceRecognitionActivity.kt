@@ -215,7 +215,7 @@ class PAChainFaceRecognitionActivity : AppCompatActivity(), CameraListener {
             setResult(0, intent)
             finish()
         } else {
-            switchText("Failed", true);
+            switchText("Failed, please click here to re verify", true);
         }
     }
 

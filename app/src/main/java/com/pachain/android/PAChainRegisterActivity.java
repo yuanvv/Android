@@ -186,9 +186,6 @@ public class PAChainRegisterActivity extends AppCompatActivity implements View.O
 
     private Secp256k1Util ecKeyUtil;
     private Map<String, Object> ecKey;
-    private String sdKeyPath;
-    private String sdPublicPEMName;
-    private String sdPrivatePEMName;
 
     private final int PERMISSIONS_REQUEST_ACCESS_SCAN_FRONT = 1;
     private final int PERMISSIONS_REQUEST_ACCESS_SCAN_BACK = 2;
@@ -218,9 +215,6 @@ public class PAChainRegisterActivity extends AppCompatActivity implements View.O
         faceRecognitionId = "";
         getBallots = false;
         getSampleBallots = false;
-        sdKeyPath = "KeyStore/";
-        sdPublicPEMName = "publickey.pem";
-        sdPrivatePEMName = "privatekey.pem";
 
         fileUtil = new FileUtil(this);
         sdCardUtils = new SDCardUtils(this);
@@ -253,6 +247,7 @@ public class PAChainRegisterActivity extends AppCompatActivity implements View.O
         tv_back = findViewById(getResources().getIdentifier("tv_back", "id", getPackageName()));
         tv_back.setOnClickListener(this);
         tv_title = findViewById(getResources().getIdentifier("tv_title", "id", getPackageName()));
+        tv_title.setText(getResources().getString(getResources().getIdentifier("common_gotv", "string", getPackageName())));
         sv_mScrollView = findViewById(getResources().getIdentifier("sv_mScrollView", "id", getPackageName()));
         ll_beforeRegister = findViewById(getResources().getIdentifier("ll_beforeRegister", "id", getPackageName()));
         ll_afterRegister = findViewById(getResources().getIdentifier("ll_afterRegister", "id", getPackageName()));
@@ -786,7 +781,7 @@ public class PAChainRegisterActivity extends AppCompatActivity implements View.O
         } catch (Exception e) {
             e.printStackTrace();
         }
-        params.add("&to=+1" + cellPhone);
+        params.add("&to=1" + cellPhone);
         params.add("&message=" + verificationCode);
         PostApi api = new PostApi(Config.SENDVERIFICATIONCODE, params);
         api.setOnApiListener(new PostApi.onApiListener() {
@@ -993,12 +988,12 @@ public class PAChainRegisterActivity extends AppCompatActivity implements View.O
                                     JSONObject seat = new JSONObject(seatObject.getString("seat"));
                                     candidateEntity = new CandidateEntity();
                                     candidateEntity.setSeatID(seat.getInt("seatid"));
-                                    candidateEntity.setSeatName(seat.getString("name"));
+                                    candidateEntity.setSeatOffice(seat.getString("office"));
                                     candidateEntity.setSeatNumber(seat.getString("number"));
+                                    candidateEntity.setSeatName((!TextUtils.isEmpty(candidateEntity.getSeatNumber()) ? candidateEntity.getSeatOffice() + " " : "") + seat.getString("name"));
                                     candidateEntity.setSeatState(seat.getString("state"));
                                     candidateEntity.setSeatCounty(seat.getString("county"));
                                     candidateEntity.setSeatCity(seat.getString("city"));
-                                    candidateEntity.setSeatOffice(seat.getString("office"));
                                     candidateEntity.setSeatLevel(seat.getInt("level"));
                                     candidates.add(candidateEntity);
 
@@ -1092,72 +1087,74 @@ public class PAChainRegisterActivity extends AppCompatActivity implements View.O
                         ArrayList<CandidateEntity> candidates;
 
                         JSONObject object = new JSONObject(response);
-                        object = new JSONObject(object.getString("data"));
-                        candidates = new ArrayList<>();
-                        ballotEntity = new BallotEntity();
-                        ballotEntity.setDate(ToolPackage.ConvertToStringByDate(object.getString("ballotdate")));
-                        ballotEntity.setName(object.getString("ballotname"));
-                        ballotEntity.setNumber("");
-                        ballotEntity.setSample(true);
+                        if (object.getBoolean("ret") && object.has("data")) {
+                            object = new JSONObject(object.getString("data"));
+                            candidates = new ArrayList<>();
+                            ballotEntity = new BallotEntity();
+                            ballotEntity.setDate(ToolPackage.ConvertToStringByDate(object.getString("ballotdate")));
+                            ballotEntity.setName(object.getString("ballotname"));
+                            ballotEntity.setNumber("");
+                            ballotEntity.setSample(true);
 
-                        JSONArray electionsArray = new JSONArray(object.getString("elections"));
-                        for (int j = 0; j < electionsArray.length(); j++) {
-                            JSONObject electionObject = electionsArray.getJSONObject(j);
-                            JSONObject election = new JSONObject(electionObject.getString("election"));
-                            candidateEntity = new CandidateEntity();
-                            candidateEntity.setElectionID(election.getInt("electionid"));
-                            candidateEntity.setElectionName(election.getString("electionname"));
-                            candidateEntity.setElectionDate(ToolPackage.ConvertToStringByDate(election.getString("electiondate")));
-                            candidateEntity.setElectionState(election.getString("electionstate"));
-                            candidateEntity.setSampleBallot(ballotEntity.isSample());
-                            candidates.add(candidateEntity);
-
-                            JSONArray seatsArray = new JSONArray(electionObject.getString("seats"));
-                            for (int m = 0; m < seatsArray.length(); m++) {
-                                JSONObject seatObject = seatsArray.getJSONObject(m);
-                                JSONObject seat = new JSONObject(seatObject.getString("seat"));
+                            JSONArray electionsArray = new JSONArray(object.getString("elections"));
+                            for (int j = 0; j < electionsArray.length(); j++) {
+                                JSONObject electionObject = electionsArray.getJSONObject(j);
+                                JSONObject election = new JSONObject(electionObject.getString("election"));
                                 candidateEntity = new CandidateEntity();
-                                candidateEntity.setSeatID(seat.getInt("seatid"));
-                                candidateEntity.setSeatName(seat.getString("name"));
-                                candidateEntity.setSeatNumber(seat.getString("number"));
-                                candidateEntity.setSeatState(seat.getString("state"));
-                                candidateEntity.setSeatCounty(seat.getString("county"));
-                                candidateEntity.setSeatCity(seat.getString("city"));
-                                candidateEntity.setSeatOffice(seat.getString("office"));
-                                candidateEntity.setSeatLevel(seat.getInt("level"));
+                                candidateEntity.setElectionID(election.getInt("electionid"));
+                                candidateEntity.setElectionName(election.getString("electionname"));
+                                candidateEntity.setElectionDate(ToolPackage.ConvertToStringByDate(election.getString("electiondate")));
+                                candidateEntity.setElectionState(election.getString("electionstate"));
+                                candidateEntity.setSampleBallot(ballotEntity.isSample());
                                 candidates.add(candidateEntity);
 
-                                JSONArray candidatesArray = new JSONArray(seatObject.getString("candidates"));
-                                for (int n = 0; n < candidatesArray.length(); n++) {
-                                    JSONObject candidateObject = candidatesArray.getJSONObject(n);
+                                JSONArray seatsArray = new JSONArray(electionObject.getString("seats"));
+                                for (int m = 0; m < seatsArray.length(); m++) {
+                                    JSONObject seatObject = seatsArray.getJSONObject(m);
+                                    JSONObject seat = new JSONObject(seatObject.getString("seat"));
                                     candidateEntity = new CandidateEntity();
-                                    candidateEntity.setElectionID(election.getInt("electionid"));
                                     candidateEntity.setSeatID(seat.getInt("seatid"));
-                                    candidateEntity.setSeatName(seat.getString("name"));
+                                    candidateEntity.setSeatOffice(seat.getString("office"));
                                     candidateEntity.setSeatNumber(seat.getString("number"));
+                                    candidateEntity.setSeatName((!TextUtils.isEmpty(candidateEntity.getSeatNumber()) ? candidateEntity.getSeatOffice() + " " : "") + seat.getString("name"));
                                     candidateEntity.setSeatState(seat.getString("state"));
                                     candidateEntity.setSeatCounty(seat.getString("county"));
                                     candidateEntity.setSeatCity(seat.getString("city"));
-                                    candidateEntity.setSeatOffice(seat.getString("office"));
                                     candidateEntity.setSeatLevel(seat.getInt("level"));
-                                    candidateEntity.setID(candidateObject.getInt("candidateid"));
-                                    candidateEntity.setName(candidateObject.getString("name"));
-                                    candidateEntity.setParty(candidateObject.getString("party"));
-                                    candidateEntity.setPartyCode("");
-                                    if (parties.containsKey(candidateEntity.getParty().toLowerCase())) {
-                                        candidateEntity.setPartyCode(parties.get(candidateEntity.getParty().toLowerCase()).getCode());
-                                    }
-                                    if (!TextUtils.isEmpty(candidateEntity.getParty()) && TextUtils.isEmpty(candidateEntity.getPartyCode())) {
-                                        candidateEntity.setPartyCode("O");
-                                    }
-                                    candidateEntity.setPhoto(candidateObject.getString("photo"));
-                                    candidateEntity.setSampleBallot(ballotEntity.isSample());
                                     candidates.add(candidateEntity);
-                                }
-                            }
 
-                            ballotEntity.setCandidates(candidates);
-                            sampleBallots.add(ballotEntity);
+                                    JSONArray candidatesArray = new JSONArray(seatObject.getString("candidates"));
+                                    for (int n = 0; n < candidatesArray.length(); n++) {
+                                        JSONObject candidateObject = candidatesArray.getJSONObject(n);
+                                        candidateEntity = new CandidateEntity();
+                                        candidateEntity.setElectionID(election.getInt("electionid"));
+                                        candidateEntity.setSeatID(seat.getInt("seatid"));
+                                        candidateEntity.setSeatName(seat.getString("name"));
+                                        candidateEntity.setSeatNumber(seat.getString("number"));
+                                        candidateEntity.setSeatState(seat.getString("state"));
+                                        candidateEntity.setSeatCounty(seat.getString("county"));
+                                        candidateEntity.setSeatCity(seat.getString("city"));
+                                        candidateEntity.setSeatOffice(seat.getString("office"));
+                                        candidateEntity.setSeatLevel(seat.getInt("level"));
+                                        candidateEntity.setID(candidateObject.getInt("candidateid"));
+                                        candidateEntity.setName(candidateObject.getString("name"));
+                                        candidateEntity.setParty(candidateObject.getString("party"));
+                                        candidateEntity.setPartyCode("");
+                                        if (parties.containsKey(candidateEntity.getParty().toLowerCase())) {
+                                            candidateEntity.setPartyCode(parties.get(candidateEntity.getParty().toLowerCase()).getCode());
+                                        }
+                                        if (!TextUtils.isEmpty(candidateEntity.getParty()) && TextUtils.isEmpty(candidateEntity.getPartyCode())) {
+                                            candidateEntity.setPartyCode("O");
+                                        }
+                                        candidateEntity.setPhoto(candidateObject.getString("photo"));
+                                        candidateEntity.setSampleBallot(ballotEntity.isSample());
+                                        candidates.add(candidateEntity);
+                                    }
+                                }
+
+                                ballotEntity.setCandidates(candidates);
+                                sampleBallots.add(ballotEntity);
+                            }
                         }
                     }
                 } catch (Exception e) {
@@ -1255,6 +1252,9 @@ public class PAChainRegisterActivity extends AppCompatActivity implements View.O
                 et_mobilePhone.setError(getResources().getString(getResources().getIdentifier("register_emptyMobilePhone", "string", getPackageName())));
                 return;
             } else if (!ToolPackage.isNumeric(cellPhone)) {
+                et_mobilePhone.setError(getResources().getString(getResources().getIdentifier("register_errorMobilePhone", "string", getPackageName())));
+                return;
+            } else if (cellPhone.length() != 10) {
                 et_mobilePhone.setError(getResources().getString(getResources().getIdentifier("register_errorMobilePhone", "string", getPackageName())));
                 return;
             }

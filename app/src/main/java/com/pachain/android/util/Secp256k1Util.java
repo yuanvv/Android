@@ -310,7 +310,7 @@ public class Secp256k1Util {
         return (ECPublicKey) keyFactory.generatePublic(publicKeySpec);
     }
 
-    public static PublicKey createPubKeyDiff(PrivateKey privateKey) throws GeneralSecurityException {
+    public static PublicKey createSharedPubKey(PrivateKey privateKey) throws GeneralSecurityException {
         BigInteger privKey = new BigInteger(System.currentTimeMillis() + bytesToHex(privateKey.getEncoded()) + "", 16);
         X9ECParameters ecp = SECNamedCurves.getByName("secp256k1");
         ECPoint curvePt = ecp.getG().multiply(privKey);

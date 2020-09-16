@@ -1,11 +1,8 @@
 package com.pachain.android.adapter;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.text.TextUtils;
-import android.util.Base64;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
@@ -13,6 +10,7 @@ import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import com.facebook.drawee.view.SimpleDraweeView;
 import com.pachain.android.entity.CandidateEntity;
 import java.util.ArrayList;
 
@@ -180,9 +178,9 @@ public class BallotHomeAdapter extends BaseAdapter {
                 holder.tv_party.setVisibility(View.GONE);
             }
             if (!TextUtils.isEmpty(model.getPhoto())) {
-                byte[] bitmapArray = Base64.decode(model.getPhoto().split(",")[1], Base64.DEFAULT);
-                Bitmap bitmap = BitmapFactory.decodeByteArray(bitmapArray, 0, bitmapArray.length);
-                holder.iv_photo.setImageBitmap(bitmap);
+                holder.iv_photo.setImageURI(model.getPhoto());
+            } else {
+                holder.iv_photo.setImageDrawable(mContext.getResources().getDrawable(mContext.getResources().getIdentifier("pachain_candidate_defaultphoto", "drawable", mContext.getPackageName())));
             }
             holder.ch_check.setOnClickListener(new View.OnClickListener() {
                @Override
@@ -245,7 +243,7 @@ public class BallotHomeAdapter extends BaseAdapter {
 
         LinearLayout ll_candidate;
         CheckBox ch_check;
-        ImageView iv_photo;
+        SimpleDraweeView iv_photo;
         TextView tv_party;
         TextView tv_name;
         ImageView iv_voted;
